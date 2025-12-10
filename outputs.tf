@@ -5,8 +5,54 @@
 # ============================================================================
 
 # ============================================================================
-# Network Outputs
+# 접속 가이드
 # ============================================================================
+
+output "connection_guide" {
+  description = "접속 가이드"
+  value       = <<-EOT
+
+  ============================================
+  📋 접속 가이드
+  ============================================
+
+  1️⃣  Bastion Host SSH 접속
+      ssh -i test.pem ubuntu@${module.ec2.bastion_public_ip}
+
+  2️⃣  Management Instance 접속 (Bastion 경유)
+      ssh -i test.pem -J ubuntu@${module.ec2.bastion_public_ip} ubuntu@${module.ec2.mgmt_private_ip}
+
+  3️⃣  kubeconfig 설정 (Management Instance에서)
+      aws eks update-kubeconfig --name ${module.eks.cluster_id} --region ap-northeast-2
+
+  4️⃣  RDS 접속 정보
+      Host: ${module.db.address}
+      Port: ${module.db.port}
+      Database: ${module.db.db_name}
+      
+      MySQL 접속 (Management Instance에서)
+      mysql -h ${module.db.address} -P ${module.db.port} -u admin -p
+
+  5️⃣  ArgoCD 접속 정보
+      네임스페이스: ${module.argocd.release_namespace}
+      
+      로그인 정보:
+      Username: admin
+      Password: terraform output -raw argocd_admin_password
+
+  6️⃣  External Secrets 확인
+      # Operator 상태 확인
+      kubectl get pods -n external-secrets
+      
+      # CRD 설치 확인
+      kubectl get crd | grep external-secrets
+      
+      # Secrets Manager Secret 이름
+      ${aws_secretsmanager_secret.db.name}
+      
+      ⚠️ ClusterSecretStore, ExternalSecret은 GitOps repo에서 설정하세요!
+  EOT
+}
 
 # ============================================================================
 # EC2 Outputs
@@ -92,57 +138,4 @@ output "secrets_manager_secret_name" {
 output "external_secrets_role_arn" {
   description = "External Secrets IRSA Role ARN"
   value       = module.external_secrets_irsa.iam_role_arn
-}
-
-# ============================================================================
-# 접속 가이드
-# ============================================================================
-
-output "connection_guide" {
-  description = "접속 가이드"
-  value       = <<-EOT
-
-  ============================================
-  📋 접속 가이드
-  ============================================
-
-  1️⃣  Bastion Host SSH 접속
-      ssh -i test.pem ubuntu@${module.ec2.bastion_public_ip}
-
-  2️⃣  Management Instance 접속 (Bastion 경유)
-      ssh -i test.pem -J ubuntu@${module.ec2.bastion_public_ip} ubuntu@${module.ec2.mgmt_private_ip}
-
-  3️⃣  kubeconfig 설정 (Management Instance에서)
-      aws eks update-kubeconfig --name ${module.eks.cluster_id} --region ap-northeast-2
-
-  4️⃣  RDS 접속 정보
-      Host: ${module.db.address}
-      Port: ${module.db.port}
-      Database: ${module.db.db_name}
-      
-      MySQL 접속 (Management Instance에서)
-      mysql -h ${module.db.address} -P ${module.db.port} -u admin -p
-
-  5️⃣  ArgoCD 접속 정보
-      네임스페이스: ${module.argocd.release_namespace}
-      
-      Port Forward (Management Instance에서):
-      kubectl port-forward svc/argocd-server -n argocd 8080:80
-      
-      로그인 정보:
-      Username: admin
-      Password: terraform output -raw argocd_admin_password
-
-  6️⃣  External Secrets 확인
-      # Operator 상태 확인
-      kubectl get pods -n external-secrets
-      
-      # CRD 설치 확인
-      kubectl get crd | grep external-secrets
-      
-      # Secrets Manager Secret 이름
-      ${aws_secretsmanager_secret.db.name}
-      
-      ⚠️ ClusterSecretStore, ExternalSecret은 GitOps repo에서 설정하세요!
-  EOT
 }
